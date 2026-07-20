@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="1200" height="1600" fill="#ffffff"/>
+
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#33403a"/>
+    </marker>
+  </defs>
+
+  <!-- A: user request (pill) -->
+  <rect x="470" y="20" width="260" height="55" rx="27" fill="#7c8a90"/>
+  <text x="600" y="53" font-size="16" font-weight="700" fill="#ffffff" text-anchor="middle">User gives a request</text>
+
+  <!-- line A -> B -->
+  <path d="M 600,75 L 600,127" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- B -->
+  <rect x="460" y="130" width="280" height="75" rx="8" fill="#2e6f9e"/>
+  <text x="600" y="160" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">Agent drafts a structured spec,</text>
+  <text x="600" y="182" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">presents it for review</text>
+
+  <!-- line B -> C -->
+  <path d="M 600,205 L 600,257" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="616" y="235" font-size="12.5" font-style="italic" fill="#4c5a54">confirmed / edited</text>
+
+  <!-- C -->
+  <rect x="500" y="260" width="200" height="55" rx="8" fill="#2e6f9e"/>
+  <text x="600" y="293" font-size="16" font-weight="700" fill="#ffffff" text-anchor="middle">spec_set</text>
+
+  <!-- line C -> D -->
+  <path d="M 600,315 L 600,367" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- D -->
+  <rect x="470" y="370" width="260" height="55" rx="8" fill="#2e6f9e"/>
+  <text x="600" y="403" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">Break into milestones + tasks</text>
+
+  <!-- line D -> E -->
+  <path d="M 600,425 L 600,477" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- E: diamond -->
+  <polygon points="600,480 750,545 600,610 450,545" fill="#8b2e3a"/>
+  <text x="600" y="538" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">Milestone with fewer</text>
+  <text x="600" y="558" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">than 2 active tasks?</text>
+
+  <!-- line E -> F (yes) -->
+  <path d="M 750,545 L 827,545" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="762" y="536" font-size="12.5" font-style="italic" fill="#4c5a54">yes</text>
+
+  <!-- F -->
+  <rect x="830" y="515" width="220" height="60" rx="8" fill="#8b2e3a"/>
+  <text x="940" y="551" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">Agent asks: intentional?</text>
+
+  <!-- line F -> G -->
+  <path d="M 940,575 L 940,622" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- G -->
+  <rect x="830" y="625" width="220" height="60" rx="8" fill="#8b2e3a"/>
+  <text x="940" y="661" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">milestone_approve</text>
+
+  <!-- line E -> H (no) -->
+  <path d="M 600,610 L 600,712" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="616" y="668" font-size="12.5" font-style="italic" fill="#4c5a54">no</text>
+
+  <!-- line G -> H (elbow) -->
+  <path d="M 940,685 L 940,745 L 733,745" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- H -->
+  <rect x="470" y="715" width="260" height="60" rx="8" fill="#2e6f9e"/>
+  <text x="600" y="751" font-size="14.5" font-weight="700" fill="#ffffff" text-anchor="middle">Agent presents the final plan</text>
+
+  <!-- line H -> I -->
+  <path d="M 600,775 L 600,812" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- I: diamond -->
+  <polygon points="600,815 750,880 600,945 450,880" fill="#6b4c9a"/>
+  <text x="600" y="873" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">User picks a</text>
+  <text x="600" y="893" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">check-in cadence</text>
+
+  <!-- line I -> J (elbow, left) -->
+  <path d="M 450,880 L 260,880 L 260,997" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="345" y="871" font-size="12.5" font-style="italic" fill="#4c5a54">per task</text>
+
+  <!-- line I -> K (straight, center) -->
+  <path d="M 600,945 L 600,997" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="616" y="975" font-size="12.5" font-style="italic" fill="#4c5a54">per milestone</text>
+
+  <!-- line I -> L (elbow, right) -->
+  <path d="M 750,880 L 940,880 L 940,997" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="815" y="871" font-size="12.5" font-style="italic" fill="#4c5a54">run through</text>
+
+  <!-- J -->
+  <rect x="150" y="1000" width="220" height="70" rx="8" fill="#6b4c9a"/>
+  <text x="260" y="1029" font-size="13.5" font-weight="700" fill="#ffffff" text-anchor="middle">Work one task,</text>
+  <text x="260" y="1049" font-size="13.5" font-weight="700" fill="#ffffff" text-anchor="middle">report, repeat</text>
+
+  <!-- K -->
+  <rect x="490" y="1000" width="220" height="70" rx="8" fill="#6b4c9a"/>
+  <text x="600" y="1029" font-size="13.5" font-weight="700" fill="#ffffff" text-anchor="middle">Finish a milestone,</text>
+  <text x="600" y="1049" font-size="13.5" font-weight="700" fill="#ffffff" text-anchor="middle">report, repeat</text>
+
+  <!-- L -->
+  <rect x="830" y="1000" width="220" height="70" rx="8" fill="#6b4c9a"/>
+  <text x="940" y="1029" font-size="13.5" font-weight="700" fill="#ffffff" text-anchor="middle">Work to the end,</text>
+  <text x="940" y="1049" font-size="13.5" font-weight="700" fill="#ffffff" text-anchor="middle">report once</text>
+
+  <!-- line J -> M (elbow) -->
+  <path d="M 260,1070 L 260,1157 L 487,1157" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <!-- line K -> M (straight) -->
+  <path d="M 600,1070 L 600,1127" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+  <!-- line L -> M (elbow) -->
+  <path d="M 940,1070 L 940,1157 L 713,1157" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- M: checkpoint pill -->
+  <rect x="490" y="1130" width="220" height="55" rx="27" fill="#eef1f0" stroke="#33403a" stroke-width="1.5"/>
+  <text x="600" y="1163" font-size="15" font-weight="700" fill="#16211d" text-anchor="middle">checkpoint_save</text>
+
+  <!-- line M -> N (dashed, handoff) -->
+  <path d="M 600,1185 L 600,1272" stroke="#33403a" stroke-width="2.5" stroke-dasharray="7 6" fill="none" marker-end="url(#arrow)"/>
+  <text x="760" y="1222" font-size="12.5" font-style="italic" fill="#1f7a6c" text-anchor="middle">context reset —</text>
+  <text x="760" y="1238" font-size="12.5" font-style="italic" fill="#1f7a6c" text-anchor="middle">could be a different agent</text>
+
+  <!-- N -->
+  <rect x="460" y="1275" width="280" height="75" rx="8" fill="#1f7a6c"/>
+  <text x="600" y="1305" font-size="15" font-weight="700" fill="#ffffff" text-anchor="middle">goal_get_context</text>
+  <text x="600" y="1327" font-size="12.5" fill="#ffffff" text-anchor="middle">(one call recovers everything)</text>
+
+  <!-- line N -> O -->
+  <path d="M 600,1350 L 600,1397" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- O -->
+  <rect x="470" y="1400" width="260" height="60" rx="8" fill="#2f7d5c"/>
+  <text x="600" y="1424" font-size="13.5" font-weight="700" fill="#ffffff" text-anchor="middle">status_report → verify</text>
+  <text x="600" y="1444" font-size="13.5" font-weight="700" fill="#ffffff" text-anchor="middle">acceptance criteria</text>
+
+  <!-- line O -> P -->
+  <path d="M 600,1460 L 600,1507" stroke="#33403a" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- P -->
+  <rect x="460" y="1510" width="280" height="60" rx="8" fill="#2f7d5c"/>
+  <text x="600" y="1534" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">goal_update_status</text>
+  <text x="600" y="1554" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">("completed")</text>
+</svg>
