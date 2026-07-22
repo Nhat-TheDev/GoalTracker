@@ -88,7 +88,7 @@ export type Checkpoint = z.infer<typeof Checkpoint>;
 
 export const goalCreateInput = z.object({
   title: z.string().min(1),
-  description: z.string().optional(),
+  description: z.string().min(1),
 });
 
 export const goalListInput = z.object({

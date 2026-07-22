@@ -42,8 +42,13 @@ describe('milestone approval gate', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it('rejects goal_create without a description', () => {
+    expect(() => call('goal_create', { title: 'Test goal' })).toThrow();
+    expect(() => call('goal_create', { title: 'Test goal', description: '' })).toThrow();
+  });
+
   it('rejects starting work on an unapproved undersized milestone, then allows it after approval', () => {
-    const goal = call('goal_create', { title: 'Test goal' });
+    const goal = call('goal_create', { title: 'Test goal', description: 'A goal used for milestone-approval-gate tests.' });
     const milestone = call('milestone_create', { goal_id: goal.id, title: 'Small milestone' });
     const task = call('task_create', { milestone_id: milestone.id, title: 'Only task' });
     expect(task.milestone_active_task_count).toBe(1);
@@ -60,7 +65,7 @@ describe('milestone approval gate', () => {
   });
 
   it('never gates transitions other than "in_progress"', () => {
-    const goal = call('goal_create', { title: 'Test goal' });
+    const goal = call('goal_create', { title: 'Test goal', description: 'A goal used for milestone-approval-gate tests.' });
     const milestone = call('milestone_create', { goal_id: goal.id, title: 'Small milestone' });
     const task = call('task_create', { milestone_id: milestone.id, title: 'Only task' });
 
@@ -73,7 +78,7 @@ describe('milestone approval gate', () => {
   });
 
   it('does not gate a milestone that starts with 2+ active tasks', () => {
-    const goal = call('goal_create', { title: 'Test goal' });
+    const goal = call('goal_create', { title: 'Test goal', description: 'A goal used for milestone-approval-gate tests.' });
     const milestone = call('milestone_create', { goal_id: goal.id, title: 'Right-sized milestone' });
     const t1 = call('task_create', { milestone_id: milestone.id, title: 'A' });
     const t2 = call('task_create', { milestone_id: milestone.id, title: 'B' });
@@ -83,7 +88,7 @@ describe('milestone approval gate', () => {
   });
 
   it('stays approved permanently even if active task count drops back below 2', () => {
-    const goal = call('goal_create', { title: 'Test goal' });
+    const goal = call('goal_create', { title: 'Test goal', description: 'A goal used for milestone-approval-gate tests.' });
     const milestone = call('milestone_create', { goal_id: goal.id, title: 'Small milestone' });
     const t1 = call('task_create', { milestone_id: milestone.id, title: 'First' });
     call('milestone_approve', { milestone_id: milestone.id });
@@ -95,7 +100,7 @@ describe('milestone approval gate', () => {
   });
 
   it('flags an unapproved undersized milestone in milestones_pending_approval, and drops it once approved', () => {
-    const goal = call('goal_create', { title: 'Test goal' });
+    const goal = call('goal_create', { title: 'Test goal', description: 'A goal used for milestone-approval-gate tests.' });
     const milestone = call('milestone_create', { goal_id: goal.id, title: 'Small milestone' });
     call('task_create', { milestone_id: milestone.id, title: 'Only task' });
 
@@ -108,7 +113,7 @@ describe('milestone approval gate', () => {
   });
 
   it('reads a milestone as completed once its only task is done, even though it was never approved', () => {
-    const goal = call('goal_create', { title: 'Test goal' });
+    const goal = call('goal_create', { title: 'Test goal', description: 'A goal used for milestone-approval-gate tests.' });
     const milestone = call('milestone_create', { goal_id: goal.id, title: 'Small milestone' });
     const task = call('task_create', { milestone_id: milestone.id, title: 'Only task' });
     call('milestone_approve', { milestone_id: milestone.id });
