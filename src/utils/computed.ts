@@ -16,7 +16,7 @@ export function isMilestoneOutOfRange(taskStatuses: TaskStatus[]): boolean {
 }
 
 /**
- * The 5-active-task upper bound stays advisory only (see DESIGN.md §9,
+ * The 5-active-task upper bound stays advisory only (see docs/design/05-decisions.md,
  * "Rejected: hard cap on Milestone task count"). The 2-active-task lower
  * bound is enforced instead: a Milestone below it needs an explicit
  * milestone_approve before task_update_status will allow starting work on
