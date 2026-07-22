@@ -14,7 +14,7 @@ export function milestoneTools(db: Database.Database): ToolDefinition[] {
     {
       name: 'milestone_create',
       description:
-        'Break a Goal into a major phase. Status is auto-computed from its tasks. When order is omitted, it auto-assigns to max(order in this goal) + 1.',
+        'Break a Goal into a major phase. Status is auto-computed from its tasks. When order is omitted, it auto-assigns to max(order in this goal) + 1. description is not required by this tool, but use it to state which breakdown strategy this milestone follows and why — not just a restated title.',
       schema: milestoneCreateInput,
       handler: (args) => {
         const input = milestoneCreateInput.parse(args);

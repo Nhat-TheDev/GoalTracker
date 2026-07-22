@@ -19,7 +19,8 @@ export function goalTools(db: Database.Database): ToolDefinition[] {
   return [
     {
       name: 'goal_create',
-      description: 'Create a new Goal. Called once when starting a new project.',
+      description:
+        'Create a new Goal. Called once when starting a new project. description is required — a 1-2 sentence summary of what this goal is about, for anyone (or any future session) scanning goal_list later.',
       schema: goalCreateInput,
       handler: (args) => {
         const input = goalCreateInput.parse(args);

@@ -112,7 +112,7 @@ Agent A never told Agent B about the pending provider decision directly — it w
 - **Audit trail.** Every status change carries a timestamp and, for `blocked`/`cancelled`, a required reason.
 - **One real gate.** Milestones with fewer than 2 active tasks require an explicit `milestone_approve` before work can start on them — everywhere else, the MCP never rejects a call.
 
-Full schema, every tool's exact input/output, and the design rationale behind each decision: [docs/design/DESIGN.md](docs/design/DESIGN.md).
+Full schema, every tool's exact input/output, and the design rationale behind each decision: [docs/design/DESIGN.md](docs/design/DESIGN.md) (index — links out to the data model, tool reference, and decision log).
 
 ## Tools (14 total)
 
@@ -125,7 +125,7 @@ Full schema, every tool's exact input/output, and the design rationale behind ea
 | Status | `status_report` ⭐ |
 | Lifecycle | `goal_update_status`, `checkpoint_save` |
 
-⭐ = the two calls you'll use most: warm-up at the start of a session, review before closing one. See [DESIGN.md §3](docs/design/DESIGN.md) for full input/output shapes.
+⭐ = the two calls you'll use most: warm-up at the start of a session, review before closing one. See [docs/design/02-tools.md](docs/design/02-tools.md) for full input/output shapes.
 
 ## Configuration
 

@@ -18,7 +18,7 @@ export function taskTools(db: Database.Database): ToolDefinition[] {
     {
       name: 'task_create',
       description:
-        'Create a task within a milestone. No hard cap — the response includes milestone_active_task_count so the Agent can judge against the 2-5 active-task guideline.',
+        'Create a task within a milestone. No hard cap — the response includes milestone_active_task_count so the Agent can judge against the 2-5 active-task guideline. description is not required by this tool, but write one substantial enough that a future session with zero memory of this conversation could act on it — a bare restated title is not enough.',
       schema: taskCreateInput,
       handler: (args) => {
         const input = taskCreateInput.parse(args);
