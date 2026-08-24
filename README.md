@@ -8,7 +8,7 @@ Long-running coding work rarely fits in one session. An ad-hoc todo list in chat
 
 - **A context-reset agent recovers everything in one call.** `goal_get_context` returns the goal, the confirmed spec, every milestone with its task counts, and the last checkpoint — no re-deriving the plan from memory.
 - **A different agent (or a different session, hours or days later) sees the real state**, including *why* something is blocked, not just that it is.
-- **The MCP never guesses on your behalf.** It stores and returns structured data; all planning judgment stays with the agent — and, for the two places that matter most (finalizing a spec, approving a too-small milestone), with you.
+- **The MCP never guesses on your behalf.** It stores and returns structured data; all planning judgment stays with the agent — and, for the moments that matter most (finalizing a spec, approving a too-small milestone), with you.
 
 ## Quick start
 
@@ -37,6 +37,8 @@ Then install the companion skill, which teaches the agent the correct call seque
 npx goaltracker install-skill              # personal — ~/.claude/skills/, every project
 npx goaltracker install-skill --project     # this project only — ./.claude/skills/
 ```
+
+Optional: if your environment also has Anthropic's Superpowers skill collection installed, the GoalTracker skill will use `superpowers:brainstorming` to explore approaches before drafting a Spec for a large or ambiguous goal. This is a recommendation, not a requirement — GoalTracker works fully without it, falling back to drafting directly.
 
 That's it. Data lives in a single SQLite file, created automatically on first run at `~/.goaltracker/goaltracker.db` (override with `GOALTRACKER_DB_PATH`). Schema upgrades apply themselves on startup — you never run a migration by hand.
 
@@ -110,7 +112,9 @@ Agent A never told Agent B about the pending provider decision directly — it w
 - **One hierarchy, one DB.** `Goal → Spec → Milestone → Task → Note`, all in one SQLite file. The agent only ever needs to remember `goal_id`.
 - **Fast warm-up.** `goal_get_context` is the single call that replaces re-reading everything.
 - **Audit trail.** Every status change carries a timestamp and, for `blocked`/`cancelled`, a required reason.
-- **One real gate.** Milestones with fewer than 2 active tasks require an explicit `milestone_approve` before work can start on them — everywhere else, the MCP never rejects a call.
+- **A short, deliberate list of gates.** Milestones with fewer than 2 active tasks require an explicit `milestone_approve`; `goal_create` needs a real description and `spec_set` needs at least one acceptance criterion; and once a Goal is archived or completed, `milestone_create`/`task_create`/`task_update_status`/`checkpoint_save` all refuse to touch it until you reactivate it. Outside of these, the MCP still never rejects a call for being low-effort.
+- **Goal staleness signal.** An `active` Goal with no Goal/Task activity for over 14 days is flagged `is_stale` on every read (`goal_list`, `goal_get_context`, `status_report`) — a nudge to check in on it, not a gate.
+- **Evidence convention (skill-level, not MCP-enforced).** The companion skill expects a note before marking a task complete — test output, a coverage delta, or, for UI work, a screenshot saved to `~/.goaltracker/evidences/<goal_id>/` and referenced by path.
 
 Full schema, every tool's exact input/output, and the design rationale behind each decision: [docs/design/DESIGN.md](docs/design/DESIGN.md) (index — links out to the data model, tool reference, and decision log).
 

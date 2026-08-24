@@ -8,7 +8,7 @@ GoalTracker is an MCP (Model Context Protocol) server that gives an AI coding ag
 
 The core problem it solves is context loss: long-running coding work rarely fits in one session, and a plain chat-based todo list doesn't survive a context reset or a handoff to a different agent. With GoalTracker, a fresh agent session — or an entirely different agent picking up the same work hours or days later — recovers full context (goal, confirmed spec, milestone/task state, and the last checkpoint's summary and next actions) with a single `goal_get_context` call, rather than re-deriving the plan from conversation history.
 
-It is data-only and judgment-free by design: the MCP stores and returns structured data but never makes planning decisions itself. The only two built-in validation gates are (1) a milestone with fewer than 2 active tasks blocks task work until explicitly approved via `milestone_approve`, and (2) `goal_create` requires a non-empty description. Everywhere else, all planning judgment stays with the agent and the user.
+It is data-only and judgment-free by design: the MCP stores and returns structured data but never makes planning decisions itself. A handful of built-in gates catch accidental skips rather than enforcing quality broadly: a milestone with fewer than 2 active tasks blocks task work until explicitly approved via `milestone_approve`; `goal_create` requires a non-empty description; `spec_set` requires at least one acceptance criterion; and once a Goal is archived or completed, milestone/task/checkpoint tools stay locked until it's reactivated. Everywhere else, planning judgment stays with the agent and the user.
 
 It's for developers and teams who use AI coding agents on multi-session or multi-agent projects and want the agent to remember what it's doing, why a task is blocked, and what's left — without re-explaining the plan every time context resets.
 
@@ -28,11 +28,13 @@ Project Management, Task Tracking, Context Persistence, Agent Handoff, Progress 
 - One-call session warm-up via `goal_get_context`: returns the goal, confirmed spec, every milestone with task counts, and the last checkpoint in a single response
 - Full context recovery for a different agent or a different session, including *why* a task is blocked, not just that it is
 - Audit trail on every status change, with a required reason for `blocked` or `cancelled` transitions
-- One deliberate validation gate: milestones with fewer than 2 active tasks require explicit `milestone_approve` before work can start
-- `spec_set` enforces confirming an overview and acceptance criteria with the user before work is broken into milestones
+- Validation stays narrow and targeted: milestones with fewer than 2 active tasks require explicit `milestone_approve`, and an archived or completed Goal locks its milestones/tasks/checkpoints until reactivated
+- `spec_set` enforces confirming an overview and at least one acceptance criterion with the user before work is broken into milestones
+- An `active` Goal untouched for over 14 days gets flagged `is_stale` on every read, prompting a check-in
 - `checkpoint_save` captures an agent summary and next actions at every stopping point, enabling clean handoffs between agents or sessions
 - `status_report` gives a progress snapshot (completion percentage, blocked tasks, acceptance criteria) for closing out a goal
 - Companion agent skill (installable via `npx goaltracker install-skill`) teaches the correct tool call sequence — spec confirmation, milestone breakdown strategy, checkpoint habits
+- Optional integration with Anthropic's Superpowers skill collection: when installed, the companion skill calls `superpowers:brainstorming` to weigh approaches before drafting a Spec for large or ambiguous goals
 - Zero external dependencies at runtime beyond a local SQLite file; self-contained and works fully offline
 
 ## Getting Started

@@ -18,8 +18,15 @@ export function milestoneTools(db: Database.Database): ToolDefinition[] {
       schema: milestoneCreateInput,
       handler: (args) => {
         const input = milestoneCreateInput.parse(args);
-        const goalExists = db.prepare('SELECT 1 FROM goals WHERE id = ?').get(input.goal_id);
-        if (!goalExists) throw new Error(`Goal not found: ${input.goal_id}`);
+        const goalRow = db.prepare('SELECT status FROM goals WHERE id = ?').get(input.goal_id) as
+          | { status: string }
+          | undefined;
+        if (!goalRow) throw new Error(`Goal not found: ${input.goal_id}`);
+        if (goalRow.status !== 'active') {
+          throw new Error(
+            `Goal is ${goalRow.status} — call goal_update_status(goal_id, "active") first before creating milestones.`
+          );
+        }
 
         let order = input.order;
         if (order === undefined) {

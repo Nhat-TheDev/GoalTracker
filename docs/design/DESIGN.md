@@ -1,7 +1,7 @@
 # GoalTracker — Design Document
 
-> **Version**: 3.7
-> **Date**: 2026-07-22
+> **Version**: 3.10
+> **Date**: 2026-08-24
 > **Purpose**: MCP server that helps AI Agents track progress, manage Goals and Tasks in a hierarchical model, and maintain context across sessions.
 
 This document is split into layered files under `docs/design/` — each one covers a different reason you'd come back to edit it. Touch only the file that matches what you're actually changing; you don't need to read the others.
@@ -42,7 +42,10 @@ Every status change is timestamped, and anything that stalls (`blocked`, `cancel
 This schema stays deliberately thin — no dependency graph, no per-criterion checklist, no dedicated "verify method" field. Every time one was proposed (see [05-decisions.md](05-decisions.md)), it got rejected in favor of writing that context into `description` or a `task_add_note` instead. For you, this means the tool never boxes you into someone else's idea of how a plan should be structured — but it also means the tool trusts the Agent to actually write something meaningful into those free-text fields. It won't catch a lazy one-line task for you.
 
 **Quality is model-dependent, by design.**
-Outside of the two gates below, this MCP never rejects a call for being low-effort — it will happily store a vague acceptance criterion or a bare-title task exactly as readily as a good one. That's a deliberate trade-off for staying schema-thin and agent-flexible, not an oversight. In practice, this means *you* stay the real quality check: review the spec draft and the final plan before work starts, because nothing downstream will flag a weak one for you.
+Outside of the quality-related gates below, this MCP never rejects a call for being low-effort — it will happily store a vague acceptance criterion or a bare-title task exactly as readily as a good one. That's a deliberate trade-off for staying schema-thin and agent-flexible, not an oversight. In practice, this means *you* stay the real quality check: review the spec draft and the final plan before work starts, because nothing downstream will flag a weak one for you.
 
-**One deliberate exception, not a precedent.**
-Two calls are actually gated: `task_update_status` refuses to start work on a Milestone with fewer than 2 active tasks until you confirm it's intentional, and `goal_create` refuses to save without a real description. Both exist because skipping them is usually an accident, not a choice — catching that once, up front, is worth the extra confirmation. Don't read this as "the MCP validates quality now" — everywhere else, it still never rejects a call.
+**A few deliberate exceptions, not a precedent.**
+A handful of calls are gated because skipping them is usually an accident, not a choice: `task_update_status` refuses to start work on a Milestone with fewer than 2 active tasks until you confirm it's intentional; `goal_create` refuses to save without a real description; and `spec_set` refuses an empty `acceptance_criteria` list. Don't read this as "the MCP validates quality now" — everywhere else, it still never rejects a call. Full list and rationale: [05-decisions.md](05-decisions.md).
+
+**Closed Goals are read-only.**
+Once a Goal is `archived` or `completed`, `milestone_create`, `task_create`, every `task_update_status` transition, and `checkpoint_save` all refuse to touch it — reactivate it first with `goal_update_status(goal_id, "active")`. Unlike the quality gates above, this one catches a wrong `goal_id`: mutating a Goal you (or the Agent) already closed is almost always accidental, and cheap to recover from, since reactivation was already a first-class transition before this guard existed.
