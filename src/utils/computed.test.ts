@@ -5,6 +5,8 @@ import {
   isMilestoneOutOfRange,
   needsApproval,
   emptyTaskStatusCounts,
+  buildGoalActivity,
+  STALE_THRESHOLD_DAYS,
 } from './computed.js';
 
 describe('computeMilestoneStatus', () => {
@@ -34,6 +36,23 @@ describe('computeMilestoneStatus', () => {
     expect(computeMilestoneStatus(['in_progress', 'pending'], undefined)).toBe('in_progress');
     expect(computeMilestoneStatus(['completed', 'pending'], undefined)).toBe('in_progress');
     expect(computeMilestoneStatus(['completed', 'blocked'], undefined)).toBe('in_progress');
+  });
+
+  it('is completed for an all-cancelled milestone too, not just all-completed', () => {
+    expect(computeMilestoneStatus(['cancelled'], undefined)).toBe('completed');
+    expect(computeMilestoneStatus(['cancelled', 'cancelled'], undefined)).toBe('completed');
+  });
+
+  it('rule order: the cancelled-exclusion from needsApproval still applies through the full function, not just in isolation', () => {
+    expect(computeMilestoneStatus(['cancelled', 'pending'], undefined)).toBe('pending');
+  });
+
+  it('reads an all-blocked milestone as in_progress once it clears the 2-active-task gate — Milestone has no dedicated blocked status', () => {
+    expect(computeMilestoneStatus(['blocked', 'blocked'], undefined)).toBe('in_progress');
+  });
+
+  it('reads a single blocked task as pending (awaiting approval), same gate as a single pending task', () => {
+    expect(computeMilestoneStatus(['blocked'], undefined)).toBe('pending');
   });
 });
 
@@ -83,5 +102,56 @@ describe('needsApproval', () => {
 
   it('ignores cancelled tasks when counting toward the 2-task minimum', () => {
     expect(needsApproval(['pending', 'cancelled'], undefined)).toBe(true);
+  });
+});
+
+describe('buildGoalActivity', () => {
+  const now = new Date('2026-08-24T00:00:00.000Z');
+
+  it('falls back to the goal updated_at when there are no tasks', () => {
+    const result = buildGoalActivity(
+      { status: 'active', updated_at: '2026-08-20T00:00:00.000Z' },
+      [],
+      now
+    );
+    expect(result.last_activity_at).toBe('2026-08-20T00:00:00.000Z');
+    expect(result.days_since_last_activity).toBe(4);
+  });
+
+  it('picks whichever of goal.updated_at or a task updated_at is most recent', () => {
+    const result = buildGoalActivity(
+      { status: 'active', updated_at: '2026-08-01T00:00:00.000Z' },
+      ['2026-08-10T00:00:00.000Z', '2026-08-22T00:00:00.000Z'],
+      now
+    );
+    expect(result.last_activity_at).toBe('2026-08-22T00:00:00.000Z');
+    expect(result.days_since_last_activity).toBe(2);
+  });
+
+  it(`is stale when active and last activity is over ${STALE_THRESHOLD_DAYS} days ago`, () => {
+    const result = buildGoalActivity(
+      { status: 'active', updated_at: '2026-07-01T00:00:00.000Z' },
+      [],
+      now
+    );
+    expect(result.is_stale).toBe(true);
+  });
+
+  it('is not stale when active and within the threshold', () => {
+    const result = buildGoalActivity(
+      { status: 'active', updated_at: '2026-08-20T00:00:00.000Z' },
+      [],
+      now
+    );
+    expect(result.is_stale).toBe(false);
+  });
+
+  it('is never stale for completed or archived goals, regardless of age', () => {
+    const stale_input = { status: 'completed' as const, updated_at: '2026-01-01T00:00:00.000Z' };
+    expect(buildGoalActivity(stale_input, [], now).is_stale).toBe(false);
+    expect(
+      buildGoalActivity({ status: 'archived' as const, updated_at: '2026-01-01T00:00:00.000Z' }, [], now)
+        .is_stale
+    ).toBe(false);
   });
 });

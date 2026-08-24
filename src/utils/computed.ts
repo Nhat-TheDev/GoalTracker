@@ -1,4 +1,4 @@
-import type { TaskStatus, Milestone } from '../schemas/index.js';
+import type { TaskStatus, Milestone, GoalStatus } from '../schemas/index.js';
 
 export type TaskStatusCounts = Record<TaskStatus, number>;
 
@@ -98,5 +98,38 @@ export function buildProgress(taskStatuses: TaskStatus[]) {
     total_tasks: taskStatuses.length,
     ...counts,
     completion_pct: completionPct(counts),
+  };
+}
+
+/** A Goal not touched in this many days reads as stale (only while still "active"). */
+export const STALE_THRESHOLD_DAYS = 14;
+
+export interface GoalActivity {
+  last_activity_at: string;
+  days_since_last_activity: number;
+  is_stale: boolean;
+}
+
+/**
+ * last_activity_at is the max of the Goal's own updated_at and every one of
+ * its tasks' updated_at (falls back to just the Goal's updated_at when it
+ * has no tasks yet). is_stale only applies to "active" Goals — a
+ * completed/archived Goal isn't stale, it's resolved, no matter how old.
+ */
+export function buildGoalActivity(
+  goal: { status: GoalStatus; updated_at: string },
+  taskUpdatedAts: string[],
+  now: Date = new Date()
+): GoalActivity {
+  const lastActivityAt = [goal.updated_at, ...taskUpdatedAts].reduce((latest, ts) =>
+    new Date(ts).getTime() > new Date(latest).getTime() ? ts : latest
+  );
+  const daysSinceLastActivity = Math.floor(
+    (now.getTime() - new Date(lastActivityAt).getTime()) / 86_400_000
+  );
+  return {
+    last_activity_at: lastActivityAt,
+    days_since_last_activity: daysSinceLastActivity,
+    is_stale: goal.status === 'active' && daysSinceLastActivity > STALE_THRESHOLD_DAYS,
   };
 }

@@ -8,14 +8,14 @@ import {
   type TaskStatus,
   type ToolDefinition,
 } from '../schemas/index.js';
-import { buildMilestonesSummary, buildProgress } from '../utils/computed.js';
+import { buildMilestonesSummary, buildProgress, buildGoalActivity } from '../utils/computed.js';
 
 export function statusTools(db: Database.Database): ToolDefinition[] {
   return [
     {
       name: 'status_report',
       description:
-        'Periodic review / pre-closure check. Returns aggregate progress, milestones with task counts, blocked tasks, and the acceptance criteria list. Data only — no suggestions.',
+        'Periodic review / pre-closure check. Returns the goal (including is_stale), aggregate progress, milestones with task counts, blocked tasks, and the acceptance criteria list. Data only — no suggestions.',
       schema: statusReportInput,
       handler: (args) => {
         const { goal_id } = statusReportInput.parse(args);
@@ -63,7 +63,7 @@ export function statusTools(db: Database.Database): ToolDefinition[] {
         const acceptance_criteria: string[] = specRow ? JSON.parse(specRow.acceptance_criteria) : [];
 
         return {
-          goal,
+          goal: { ...goal, ...buildGoalActivity(goal, taskRows.map((t) => t.updated_at)) },
           progress,
           milestones,
           milestones_out_of_range: outOfRange,

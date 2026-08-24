@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -31,6 +31,13 @@ describe('MCP server e2e (real stdio transport)', () => {
   afterEach(async () => {
     await client.close();
     rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('reports its real package.json version to a connecting client, not a stale hardcoded one', () => {
+    const expected = JSON.parse(
+      readFileSync(path.join(import.meta.dirname, '..', 'package.json'), 'utf-8')
+    ).version;
+    expect(client.getServerVersion()?.version).toBe(expected);
   });
 
   it('lists all registered tools over the real JSON-RPC transport', async () => {

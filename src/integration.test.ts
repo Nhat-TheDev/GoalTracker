@@ -128,6 +128,62 @@ describe('milestone approval gate', () => {
   });
 });
 
+describe('goal staleness', () => {
+  let dir: string;
+  let db: Database.Database;
+  let call: ReturnType<typeof wire>;
+
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'goaltracker-test-'));
+    db = openDb(path.join(dir, 'test.db'));
+    call = wire(db);
+  });
+
+  afterEach(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('reads a freshly-touched active goal as not stale, across goal_list / goal_get_context / status_report', () => {
+    const goal = call('goal_create', { title: 'Fresh goal', description: 'A goal touched moments ago.' });
+
+    const listed = call('goal_list', {});
+    const fromList = listed.find((g: any) => g.id === goal.id);
+    expect(fromList.is_stale).toBe(false);
+    expect(fromList.last_activity_at).toBeTruthy();
+
+    const ctx = call('goal_get_context', { goal_id: goal.id });
+    expect(ctx.goal.is_stale).toBe(false);
+
+    const report = call('status_report', { goal_id: goal.id });
+    expect(report.goal.is_stale).toBe(false);
+  });
+
+  it('flags an active goal as stale once its last task activity is over the threshold old', () => {
+    const goal = call('goal_create', { title: 'Old goal', description: 'A goal whose last task touch is backdated.' });
+    const milestone = call('milestone_create', { goal_id: goal.id, title: 'M1' });
+    const task = call('task_create', { milestone_id: milestone.id, title: 'Task 1' });
+
+    const twentyDaysAgo = new Date(Date.now() - 20 * 86_400_000).toISOString();
+    db.prepare('UPDATE tasks SET updated_at = ? WHERE id = ?').run(twentyDaysAgo, task.id);
+    db.prepare('UPDATE goals SET updated_at = ? WHERE id = ?').run(twentyDaysAgo, goal.id);
+
+    const report = call('status_report', { goal_id: goal.id });
+    expect(report.goal.is_stale).toBe(true);
+    expect(report.goal.days_since_last_activity).toBeGreaterThan(14);
+  });
+
+  it('never flags a completed goal as stale, even if backdated', () => {
+    const goal = call('goal_create', { title: 'Done goal', description: 'A goal completed long ago.' });
+    const twentyDaysAgo = new Date(Date.now() - 20 * 86_400_000).toISOString();
+    db.prepare('UPDATE goals SET status = ?, updated_at = ? WHERE id = ?').run('completed', twentyDaysAgo, goal.id);
+
+    const listed = call('goal_list', { status: 'completed' });
+    const fromList = listed.find((g: any) => g.id === goal.id);
+    expect(fromList.is_stale).toBe(false);
+  });
+});
+
 describe('migration upgrade path', () => {
   let dir: string;
   let dbPath: string;
