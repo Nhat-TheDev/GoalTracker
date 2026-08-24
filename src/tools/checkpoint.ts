@@ -11,11 +11,20 @@ export function checkpointTools(db: Database.Database): ToolDefinition[] {
       schema: checkpointSaveInput,
       handler: (args) => {
         const input = checkpointSaveInput.parse(args);
-        const goalExists = db.prepare('SELECT 1 FROM goals WHERE id = ?').get(input.goal_id);
-        if (!goalExists) throw new Error(`Goal not found: ${input.goal_id}`);
+        const goalRow = db.prepare('SELECT status FROM goals WHERE id = ?').get(input.goal_id) as
+          | { status: string }
+          | undefined;
+        if (!goalRow) throw new Error(`Goal not found: ${input.goal_id}`);
+        if (goalRow.status !== 'active') {
+          throw new Error(
+            `Goal is ${goalRow.status} — call goal_update_status(goal_id, "active") first before saving a checkpoint.`
+          );
+        }
         if (input.current_task_id) {
-          const taskExists = db.prepare('SELECT 1 FROM tasks WHERE id = ?').get(input.current_task_id);
-          if (!taskExists) throw new Error(`Task not found: ${input.current_task_id}`);
+          const taskExists = db
+            .prepare('SELECT 1 FROM tasks WHERE id = ? AND goal_id = ?')
+            .get(input.current_task_id, input.goal_id);
+          if (!taskExists) throw new Error(`Task not found in this Goal: ${input.current_task_id}`);
         }
         const now = new Date().toISOString();
         const id = randomUUID();

@@ -108,7 +108,7 @@ export const goalUpdateStatusInput = z.object({
 export const specSetInput = z.object({
   goal_id: z.string().min(1),
   overview: z.string().min(1),
-  acceptance_criteria: z.array(z.string()),
+  acceptance_criteria: z.array(z.string()).min(1),
   constraints: z.array(z.string()).optional(),
   out_of_scope: z.array(z.string()).optional(),
 });

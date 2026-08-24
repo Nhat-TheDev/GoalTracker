@@ -128,6 +128,143 @@ describe('milestone approval gate', () => {
   });
 });
 
+describe('spec quality gate', () => {
+  let dir: string;
+  let db: Database.Database;
+  let call: ReturnType<typeof wire>;
+
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'goaltracker-test-'));
+    db = openDb(path.join(dir, 'test.db'));
+    call = wire(db);
+  });
+
+  afterEach(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('rejects spec_set with an empty acceptance_criteria array', () => {
+    const goal = call('goal_create', { title: 'Test goal', description: 'A goal used for spec-quality tests.' });
+    expect(() =>
+      call('spec_set', { goal_id: goal.id, overview: 'Some overview', acceptance_criteria: [] })
+    ).toThrow();
+  });
+});
+
+describe('goal-active guard', () => {
+  let dir: string;
+  let db: Database.Database;
+  let call: ReturnType<typeof wire>;
+
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'goaltracker-test-'));
+    db = openDb(path.join(dir, 'test.db'));
+    call = wire(db);
+  });
+
+  afterEach(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('rejects milestone_create, task_create, task_update_status, and checkpoint_save on an archived goal, then allows them again after reactivation', () => {
+    const goal = call('goal_create', { title: 'Test goal', description: 'A goal used for goal-active-guard tests.' });
+    const milestone = call('milestone_create', { goal_id: goal.id, title: 'M1' });
+    const task = call('task_create', { milestone_id: milestone.id, title: 'T1' });
+    call('task_create', { milestone_id: milestone.id, title: 'T2' });
+
+    call('goal_update_status', { goal_id: goal.id, status: 'archived' });
+
+    expect(() => call('milestone_create', { goal_id: goal.id, title: 'M2' })).toThrow(/archived/);
+    expect(() => call('task_create', { milestone_id: milestone.id, title: 'T3' })).toThrow(/archived/);
+    expect(() => call('task_update_status', { task_id: task.id, status: 'in_progress' })).toThrow(/archived/);
+    expect(() =>
+      call('checkpoint_save', { goal_id: goal.id, agent_summary: 'summary', next_actions: [] })
+    ).toThrow(/archived/);
+
+    call('goal_update_status', { goal_id: goal.id, status: 'active' });
+
+    expect(() => call('milestone_create', { goal_id: goal.id, title: 'M2' })).not.toThrow();
+    expect(() => call('task_create', { milestone_id: milestone.id, title: 'T3' })).not.toThrow();
+    expect(() => call('task_update_status', { task_id: task.id, status: 'in_progress' })).not.toThrow();
+    expect(() =>
+      call('checkpoint_save', { goal_id: goal.id, agent_summary: 'summary', next_actions: [] })
+    ).not.toThrow();
+  });
+
+  it('rejects checkpoint_save when current_task_id belongs to a different goal', () => {
+    const goalA = call('goal_create', { title: 'Goal A', description: 'A goal used for checkpoint integrity tests.' });
+    const goalB = call('goal_create', { title: 'Goal B', description: 'A second goal used for checkpoint integrity tests.' });
+    const milestoneA = call('milestone_create', { goal_id: goalA.id, title: 'M1' });
+    const taskA = call('task_create', { milestone_id: milestoneA.id, title: 'T1' });
+
+    expect(() =>
+      call('checkpoint_save', { goal_id: goalB.id, current_task_id: taskA.id, agent_summary: 'summary', next_actions: [] })
+    ).toThrow(/not found/);
+
+    expect(() =>
+      call('checkpoint_save', { goal_id: goalA.id, current_task_id: taskA.id, agent_summary: 'summary', next_actions: [] })
+    ).not.toThrow();
+  });
+});
+
+describe('goal staleness', () => {
+  let dir: string;
+  let db: Database.Database;
+  let call: ReturnType<typeof wire>;
+
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'goaltracker-test-'));
+    db = openDb(path.join(dir, 'test.db'));
+    call = wire(db);
+  });
+
+  afterEach(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('reads a freshly-touched active goal as not stale, across goal_list / goal_get_context / status_report', () => {
+    const goal = call('goal_create', { title: 'Fresh goal', description: 'A goal touched moments ago.' });
+
+    const listed = call('goal_list', {});
+    const fromList = listed.find((g: any) => g.id === goal.id);
+    expect(fromList.is_stale).toBe(false);
+    expect(fromList.last_activity_at).toBeTruthy();
+
+    const ctx = call('goal_get_context', { goal_id: goal.id });
+    expect(ctx.goal.is_stale).toBe(false);
+
+    const report = call('status_report', { goal_id: goal.id });
+    expect(report.goal.is_stale).toBe(false);
+  });
+
+  it('flags an active goal as stale once its last task activity is over the threshold old', () => {
+    const goal = call('goal_create', { title: 'Old goal', description: 'A goal whose last task touch is backdated.' });
+    const milestone = call('milestone_create', { goal_id: goal.id, title: 'M1' });
+    const task = call('task_create', { milestone_id: milestone.id, title: 'Task 1' });
+
+    const twentyDaysAgo = new Date(Date.now() - 20 * 86_400_000).toISOString();
+    db.prepare('UPDATE tasks SET updated_at = ? WHERE id = ?').run(twentyDaysAgo, task.id);
+    db.prepare('UPDATE goals SET updated_at = ? WHERE id = ?').run(twentyDaysAgo, goal.id);
+
+    const report = call('status_report', { goal_id: goal.id });
+    expect(report.goal.is_stale).toBe(true);
+    expect(report.goal.days_since_last_activity).toBeGreaterThan(14);
+  });
+
+  it('never flags a completed goal as stale, even if backdated', () => {
+    const goal = call('goal_create', { title: 'Done goal', description: 'A goal completed long ago.' });
+    const twentyDaysAgo = new Date(Date.now() - 20 * 86_400_000).toISOString();
+    db.prepare('UPDATE goals SET status = ?, updated_at = ? WHERE id = ?').run('completed', twentyDaysAgo, goal.id);
+
+    const listed = call('goal_list', { status: 'completed' });
+    const fromList = listed.find((g: any) => g.id === goal.id);
+    expect(fromList.is_stale).toBe(false);
+  });
+});
+
 describe('migration upgrade path', () => {
   let dir: string;
   let dbPath: string;

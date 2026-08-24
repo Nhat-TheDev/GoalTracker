@@ -23,9 +23,18 @@ export function taskTools(db: Database.Database): ToolDefinition[] {
       handler: (args) => {
         const input = taskCreateInput.parse(args);
         const milestoneRow = db
-          .prepare('SELECT goal_id FROM milestones WHERE id = ?')
-          .get(input.milestone_id) as { goal_id: string } | undefined;
+          .prepare(
+            `SELECT m.goal_id as goal_id, g.status as goal_status
+             FROM milestones m JOIN goals g ON g.id = m.goal_id
+             WHERE m.id = ?`
+          )
+          .get(input.milestone_id) as { goal_id: string; goal_status: string } | undefined;
         if (!milestoneRow) throw new Error(`Milestone not found: ${input.milestone_id}`);
+        if (milestoneRow.goal_status !== 'active') {
+          throw new Error(
+            `Goal is ${milestoneRow.goal_status} — call goal_update_status(goal_id, "active") first before creating tasks.`
+          );
+        }
 
         const now = new Date().toISOString();
         const id = randomUUID();
@@ -106,10 +115,19 @@ export function taskTools(db: Database.Database): ToolDefinition[] {
       schema: taskUpdateStatusInput,
       handler: (args) => {
         const input = taskUpdateStatusInput.parse(args);
-        const existing = db.prepare('SELECT milestone_id FROM tasks WHERE id = ?').get(input.task_id) as
-          | { milestone_id: string }
+        const existing = db.prepare('SELECT milestone_id, goal_id FROM tasks WHERE id = ?').get(input.task_id) as
+          | { milestone_id: string; goal_id: string }
           | undefined;
         if (!existing) throw new Error(`Task not found: ${input.task_id}`);
+
+        const goalRow = db.prepare('SELECT status FROM goals WHERE id = ?').get(existing.goal_id) as {
+          status: string;
+        };
+        if (goalRow.status !== 'active') {
+          throw new Error(
+            `Goal is ${goalRow.status} — call goal_update_status(goal_id, "active") first before updating tasks.`
+          );
+        }
 
         if (input.status === 'in_progress') {
           const milestoneRow = db

@@ -16,6 +16,7 @@ import { statusTools } from './tools/status.js';
 import { checkpointTools } from './tools/checkpoint.js';
 import type { ToolDefinition } from './schemas/index.js';
 import { installSkill } from './installSkill.js';
+import { getPackageVersion } from './utils/version.js';
 
 async function runServer(): Promise<void> {
   const db = openDb();
@@ -31,7 +32,7 @@ async function runServer(): Promise<void> {
 
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
 
-  const server = new Server({ name: 'GoalTracker', version: '1.0.0' }, { capabilities: { tools: {} } });
+  const server = new Server({ name: 'GoalTracker', version: getPackageVersion() }, { capabilities: { tools: {} } });
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: tools.map((tool) => ({

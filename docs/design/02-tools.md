@@ -18,14 +18,14 @@
 | | |
 |---|---|
 | **Input** | `{ status?: "active" \| "completed" \| "archived" }` |
-| **Output** | `Goal[]` |
+| **Output** | `Array<Goal & { last_activity_at, days_since_last_activity, is_stale }>` — see `is_stale` note under `status_report` below |
 | **When** | Agent needs to find a goal_id, or wants an overview of all projects. |
 
 #### `goal_get_context` ⭐
 | | |
 |---|---|
 | **Input** | `{ goal_id: string }` |
-| **Output** | `{ goal, spec, milestones (with task_counts), milestones_out_of_range: string[], milestones_pending_approval: string[], progress, last_checkpoint }` |
+| **Output** | `{ goal (& is_stale), spec, milestones (with task_counts), milestones_out_of_range: string[], milestones_pending_approval: string[], progress, last_checkpoint }` |
 | **When** | **Start of every session.** The single warm-up call. Replaces `spec_get + milestone_list + checkpoint_load`. |
 | **Note** | `milestones_out_of_range` lists `milestone_id`s with < 2 or > 5 active tasks, excluding Milestones already `completed` — advisory only, the Agent decides whether to split/merge/add tasks. `milestones_pending_approval` lists `milestone_id`s with < 2 active tasks and no `approved_at` yet (same exclusion) — this one is not just advisory, see `milestone_approve` below. |
 
@@ -36,10 +36,10 @@
 #### `spec_set`
 | | |
 |---|---|
-| **Input** | `{ goal_id, overview, acceptance_criteria[], constraints?, out_of_scope? }` |
+| **Input** | `{ goal_id, overview, acceptance_criteria[], constraints?, out_of_scope? }` — `acceptance_criteria` must have at least 1 item |
 | **Output** | `Spec` |
 | **When** | Creating or overwriting the Spec. Create-or-replace semantics. |
-| **Note** | `spec_get` is unnecessary (returned by `goal_get_context`). `spec_update` is unnecessary (full overwrite is sufficient). |
+| **Note** | `spec_get` is unnecessary (returned by `goal_get_context`). `spec_update` is unnecessary (full overwrite is sufficient). An empty `acceptance_criteria` is rejected at the zod boundary — see [05-decisions.md](05-decisions.md). |
 
 ---
 
@@ -51,7 +51,7 @@
 | **Input** | `{ goal_id, title, description?, order? }` |
 | **Output** | `Milestone` |
 | **When** | Breaking a Goal into phases during planning. |
-| **Note** | `milestone_list` removed (in `goal_get_context`). `milestone_update` removed (rarely needed). Status is auto-computed. When `order` is omitted, it auto-assigns to `max(order within this goal) + 1` (starting at 0) instead of a constant default — avoids every Milestone colliding at `order = 0`. `description` stays optional and unvalidated by choice — see [05-decisions.md](05-decisions.md). |
+| **Note** | `milestone_list` removed (in `goal_get_context`). `milestone_update` removed (rarely needed). Status is auto-computed. When `order` is omitted, it auto-assigns to `max(order within this goal) + 1` (starting at 0) instead of a constant default — avoids every Milestone colliding at `order = 0`. `description` stays optional and unvalidated by choice — see [05-decisions.md](05-decisions.md). Rejects if the parent Goal isn't `"active"` — see [05-decisions.md](05-decisions.md). |
 
 #### `milestone_approve`
 | | |
@@ -71,7 +71,7 @@
 | **Input** | `{ milestone_id, title, description?, priority?: "low"\|"medium"\|"high" }` |
 | **Output** | `Task & { milestone_active_task_count: number }` |
 | **When** | Creating tasks during planning, or when new work emerges during execution. |
-| **Note** | No hard cap. `milestone_active_task_count` (active = not `cancelled`, counted after this insert) lets the Agent judge against the 2–5 guideline (see [01-data-model.md](01-data-model.md)) and decide whether to start a new Milestone instead of continuing to add here. `description` stays optional and unvalidated by choice — see [05-decisions.md](05-decisions.md). |
+| **Note** | No hard cap. `milestone_active_task_count` (active = not `cancelled`, counted after this insert) lets the Agent judge against the 2–5 guideline (see [01-data-model.md](01-data-model.md)) and decide whether to start a new Milestone instead of continuing to add here. `description` stays optional and unvalidated by choice — see [05-decisions.md](05-decisions.md). Rejects if the parent Goal isn't `"active"` — see [05-decisions.md](05-decisions.md). |
 
 #### `task_get`
 | | |
@@ -93,7 +93,7 @@
 | **Input** | `{ task_id, status: "pending"\|"in_progress"\|"completed"\|"blocked"\|"cancelled", reason? }` — `reason` required for `blocked` and `cancelled` |
 | **Output** | `Task` |
 | **When** | Every status transition. Also handles cancellation (status = `"cancelled"`). |
-| **Note** | Rejects a transition to `"in_progress"` if the task's Milestone has fewer than 2 active tasks and hasn't been approved yet (see `milestone_approve`). Other transitions (`blocked`, `cancelled`, `completed`) are never gated by this. |
+| **Note** | Rejects a transition to `"in_progress"` if the task's Milestone has fewer than 2 active tasks and hasn't been approved yet (see `milestone_approve`). Other transitions (`blocked`, `cancelled`, `completed`) are never gated by that rule — but every transition, regardless of target status, is rejected if the task's Goal isn't `"active"` — see [05-decisions.md](05-decisions.md). |
 
 #### `task_add_note`
 | | |
@@ -117,7 +117,7 @@
 ```typescript
 // status_report output
 {
-  goal:     Goal,
+  goal:     Goal & { last_activity_at: string, days_since_last_activity: number, is_stale: boolean },
   progress: {
     total_tasks:    number,
     completed:      number,
@@ -141,6 +141,7 @@
   acceptance_criteria: string[]   // same list as Spec.acceptance_criteria — Agent cross-checks manually against task evidence; verification progress is tracked via checkpoint_save's agent_summary/next_actions, not a persisted per-criterion flag
 }
 ```
+`is_stale` (computed, not stored — same pattern as `Milestone.status`) is `true` only when the Goal's `status` is `"active"` and `last_activity_at` (the most recent of the Goal's own `updated_at` and every one of its Tasks' `updated_at`) is more than 14 days old. A `completed`/`archived` Goal is never `is_stale`, regardless of age. Also present on `goal`/each Goal returned by `goal_list` and `goal_get_context`.
 
 ---
 
@@ -160,3 +161,4 @@
 | **Input** | `{ goal_id, current_task_id?, agent_summary, next_actions[] }` |
 | **Output** | `Checkpoint` |
 | **When** | End of every session, before the Agent's context is reset. Loaded via `goal_get_context`. |
+| **Note** | Rejects if the Goal isn't `"active"`, and rejects `current_task_id` if it doesn't belong to `goal_id` — see [05-decisions.md](05-decisions.md). |

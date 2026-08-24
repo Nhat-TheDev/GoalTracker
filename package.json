@@ -1,6 +1,6 @@
 {
   "name": "goaltracker",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "MCP server that helps AI Agents track progress, manage Goals and Tasks in a hierarchical model, and maintain context across sessions.",
   "keywords": [
     "agent-skills",

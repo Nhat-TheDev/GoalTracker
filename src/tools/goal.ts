@@ -13,7 +13,7 @@ import {
   type TaskStatus,
   type ToolDefinition,
 } from '../schemas/index.js';
-import { buildMilestonesSummary, buildProgress } from '../utils/computed.js';
+import { buildMilestonesSummary, buildProgress, buildGoalActivity } from '../utils/computed.js';
 
 export function goalTools(db: Database.Database): ToolDefinition[] {
   return [
@@ -41,20 +41,29 @@ export function goalTools(db: Database.Database): ToolDefinition[] {
     },
     {
       name: 'goal_list',
-      description: 'List Goals, optionally filtered by status. Use to find a goal_id or get an overview of all projects.',
+      description:
+        'List Goals, optionally filtered by status. Use to find a goal_id or get an overview of all projects. Each Goal includes is_stale (true when an "active" Goal has had no Goal/Task activity for over 14 days).',
       schema: goalListInput,
       handler: (args) => {
         const input = goalListInput.parse(args);
         const rows = input.status
           ? db.prepare('SELECT * FROM goals WHERE status = ? ORDER BY created_at DESC').all(input.status)
           : db.prepare('SELECT * FROM goals ORDER BY created_at DESC').all();
-        return rows.map((r) => rowToGoal(r as Record<string, unknown>));
+        const lastTaskUpdateRows = db
+          .prepare('SELECT goal_id, MAX(updated_at) as last_update FROM tasks GROUP BY goal_id')
+          .all() as { goal_id: string; last_update: string }[];
+        const lastTaskUpdateByGoal = new Map(lastTaskUpdateRows.map((r) => [r.goal_id, r.last_update]));
+        return rows.map((r) => {
+          const goal = rowToGoal(r as Record<string, unknown>);
+          const lastTaskUpdate = lastTaskUpdateByGoal.get(goal.id);
+          return { ...goal, ...buildGoalActivity(goal, lastTaskUpdate ? [lastTaskUpdate] : []) };
+        });
       },
     },
     {
       name: 'goal_get_context',
       description:
-        'The single warm-up call for a context-reset Agent: returns the goal, spec, milestones with task counts, out-of-range milestones, aggregate progress, and the last checkpoint. Call this at the start of every session.',
+        'The single warm-up call for a context-reset Agent: returns the goal (including is_stale), spec, milestones with task counts, out-of-range milestones, aggregate progress, and the last checkpoint. Call this at the start of every session.',
       schema: goalGetContextInput,
       handler: (args) => {
         const { goal_id } = goalGetContextInput.parse(args);
@@ -70,13 +79,15 @@ export function goalTools(db: Database.Database): ToolDefinition[] {
           .prepare('SELECT * FROM milestones WHERE goal_id = ? ORDER BY "order" ASC')
           .all(goal_id);
         const taskStatusRows = db
-          .prepare('SELECT milestone_id, status FROM tasks WHERE goal_id = ?')
-          .all(goal_id) as { milestone_id: string; status: TaskStatus }[];
+          .prepare('SELECT milestone_id, status, updated_at FROM tasks WHERE goal_id = ?')
+          .all(goal_id) as { milestone_id: string; status: TaskStatus; updated_at: string }[];
 
         const tasksByMilestone = new Map<string, TaskStatus[]>();
         const allStatuses: TaskStatus[] = [];
+        const allTaskUpdatedAts: string[] = [];
         for (const row of taskStatusRows) {
           allStatuses.push(row.status);
+          allTaskUpdatedAts.push(row.updated_at);
           const list = tasksByMilestone.get(row.milestone_id) ?? [];
           list.push(row.status);
           tasksByMilestone.set(row.milestone_id, list);
@@ -94,7 +105,7 @@ export function goalTools(db: Database.Database): ToolDefinition[] {
         const last_checkpoint = checkpointRow ? rowToCheckpoint(checkpointRow as Record<string, unknown>) : null;
 
         return {
-          goal,
+          goal: { ...goal, ...buildGoalActivity(goal, allTaskUpdatedAts) },
           spec,
           milestones,
           milestones_out_of_range: outOfRange,
