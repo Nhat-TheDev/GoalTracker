@@ -1,5 +1,13 @@
 # GoalTracker MCP
 
+[![npm version](https://img.shields.io/npm/v/goaltracker.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/goaltracker)
+[![Verify MCP build](https://github.com/Nhat-TheDev/GoalTracker/actions/workflows/verify-mcp-build.yml/badge.svg)](https://github.com/Nhat-TheDev/GoalTracker/actions/workflows/verify-mcp-build.yml)
+[![GoalTracker on MCP Marketplace](https://mcp-marketplace.io/api/badge?slug=goaltracker)](https://mcp-marketplace.io/server/goaltracker)
+[![MCP Trust Score](https://mcptrustchecker.com/registry/goaltracker/badge.svg)](https://mcptrustchecker.com/registry/goaltracker)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow?logo=opensourceinitiative&logoColor=white)](./LICENSE)
+
+
 **Persistent, structured project memory for AI coding agents.** GoalTracker is an MCP server that gives an agent like Claude Code a real plan to work from — `Goal → Spec → Milestone → Task → Note` — stored in a single SQLite file, so a context reset (or a completely different agent picking up the same work) is a 1-tool-call recovery, not a "let me re-read the whole conversation" guessing game.
 
 ## Why
